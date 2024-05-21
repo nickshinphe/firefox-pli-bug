@@ -170,7 +170,9 @@ func (m *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	negotiate := func() {
 		offer, err := pc.CreateOffer(nil)
 		chkErr(err)
-		// log.Printf("[%d] negotiate create offer: %s", id, offer.SDP)
+		log.Printf("==================================================")
+		log.Printf("XXX: [%d] negotiate create offer: %s", id, offer.SDP)
+		log.Printf("==================================================")
 
 		err = pc.SetLocalDescription(offer)
 		chkErr(err)
@@ -241,7 +243,7 @@ func (m *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				for _, pkt := range pkts {
-					// log.Printf("[%d] rtcp packet for track ssrc %d: %T", recvPeer.id, track.SSRC(), pkt)
+					// log.Printf("XXX: [%d] rtcp packet for track ssrc %d: %T", recvPeer.id, track.SSRC(), pkt)
 					switch pkt.(type) {
 					case *rtcp.PictureLossIndication:
 						log.Printf("[%d] rtcp packet for track ssrc %d: %T", recvPeer.id, track.SSRC(), pkt)
@@ -265,6 +267,7 @@ func (m *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	msgChan := make(chan Message)
 	go func() {
+		ignore := 0
 		for {
 			select {
 			case msg := <-msgChan:
@@ -281,7 +284,9 @@ func (m *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					var answer webrtc.SessionDescription
 					err := json.Unmarshal(msg.Payload, &answer)
 					chkErr(err)
-					// log.Printf("[%d] Got answer: %s", id, answer.SDP)
+					log.Printf("==================================================")
+					log.Printf("XXX: [%d] Got answer: %s", id, answer.SDP)
+					log.Printf("==================================================")
 					err = pc.SetRemoteDescription(answer)
 					chkErr(err)
 				case "pub":
@@ -289,8 +294,10 @@ func (m *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						Direction: webrtc.RTPTransceiverDirectionRecvonly,
 					})
 					negotiate()
+				case "ping":
+					ignore++
 				default:
-					// log.Printf("[%d] Unhandled websocket message type: %s", id, msg.Type)
+					log.Printf("XXX: [%d] Unhandled websocket message type: %s", id, msg.Type)
 				}
 			case track := <-tracksChan:
 				for _, otherPeer := range m.peers {

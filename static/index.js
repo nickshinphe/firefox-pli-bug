@@ -1,3 +1,32 @@
+
+// ------------------------------------------------------------
+let NIKNIKstatus = document.getElementById('PliStatus');
+let NIKNIKtriggerPli = false;
+
+setInterval(() => {
+  NIKNIKtriggerPli = !NIKNIKtriggerPli;
+  if (NIKNIKtriggerPli) {
+    NIKNIKstatus.innerHTML = 'status: PLIs for each frame';
+  } else {
+    NIKNIKstatus.innerHTML = 'status: GOOD';
+  }
+
+  worker.postMessage({
+    operation: 'PLI',
+    pli: NIKNIKtriggerPli,
+  });
+}, 15000);
+
+const worker = new Worker('./worker.js', {name: 'E2EE worker'});
+function XXX_setupReceiverTransform(kind, receiver) {
+  if (window.RTCRtpScriptTransform && kind === 'video') {
+    receiver.transform = new RTCRtpScriptTransform(worker, {operation: 'decode'});
+    return;
+  }
+}
+
+// ------------------------------------------------------------
+
 function createButton(label, onclick) {
   const button = document.createElement('button')
   button.textContent = label
@@ -13,7 +42,8 @@ function createLabel(text) {
 }
 
 createButton('join', function() {
-  document.body.innerHTML = ''
+  document.body.innerHTML = '<p><span id="PliStatus">status: GOOD</span></p>'
+  NIKNIKstatus = document.getElementById('PliStatus');
   createButton('Add camera stream', async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true })
     addVideo(stream)
@@ -32,6 +62,7 @@ createButton('join', function() {
   const wsUrl = location.origin.replace(/^http/, 'ws') + '/ws/'
   const ws = new WebSocket(wsUrl)
   const pc = new RTCPeerConnection({
+    encodedInsertableStreams: true,
     iceServers: [{
       urls: ['stun:rtc.peercalls.com'],
     }],
@@ -101,6 +132,7 @@ createButton('join', function() {
 
   pc.addEventListener('track', event => {
     console.log('peer ontrack event', event.track)
+    XXX_setupReceiverTransform(event.track.kind, event.receiver)
     event.streams.forEach(stream => {
       addVideo(stream)
     })
